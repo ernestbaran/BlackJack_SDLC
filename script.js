@@ -210,7 +210,7 @@ async function deal() {
   splitHands = [];
   currentHandIndex = 0;
 
-    // Reset assicurazione per la nuova mano
+  // Reset assicurazione per la nuova mano
   insuranceBet = 0;
   insuranceOffered = false;
   insuranceResolved = false;
@@ -252,7 +252,7 @@ async function deal() {
   updatePlayerScore();
   updateDealerScore();
 
-    // Offerta assicurazione se il banco mostra un Asso e il giocatore non ha Blackjack
+  // Offerta assicurazione se il banco mostra un Asso e il giocatore non ha Blackjack
   const dealerUpCard = dealerCards[0];
   const suggestedInsurance = Math.floor(currentBet / 2);
 
@@ -525,6 +525,22 @@ async function revealDealerCard() {
   resolveInsuranceIfNeeded();
 }
 
+function resolveInsuranceIfNeeded() {
+  if (!insuranceOffered || insuranceResolved) return;
+
+  insuranceResolved = true;
+
+  // Banco ha Blackjack con due carte
+  if (dealerCards.length === 2 && dealerScore === 21 && insuranceBet > 0) {
+    const insuranceWin = insuranceBet * 3; // puntata + vincita 2:1
+    extraWinningsThisRound += insuranceWin;
+    toast('Il banco ha Blackjack, l\'assicurazione paga 2:1.');
+  } else if (insuranceBet > 0) {
+    toast('Assicurazione persa.');
+  }
+}
+
+
 async function dealerPlay() {
   while (dealerScore < 17) {
     await new Promise(resolve => setTimeout(resolve, 450));
@@ -716,20 +732,6 @@ function doubleBet() {
   }
 }
 
-function resolveInsuranceIfNeeded() {
-  if (!insuranceOffered || insuranceResolved) return;
-
-  insuranceResolved = true;
-
-  // Banco ha Blackjack con due carte
-  if (dealerCards.length === 2 && dealerScore === 21 && insuranceBet > 0) {
-    const insuranceWin = insuranceBet * 3; // puntata + vincita 2:1
-    extraWinningsThisRound += insuranceWin;
-    toast('Il banco ha Blackjack, l\'assicurazione paga 2:1.');
-  } else if (insuranceBet > 0) {
-    toast('Assicurazione persa.');
-  }
-}
 
 
 function getCardValue(value) {
@@ -781,7 +783,6 @@ function buyInsurance() {
   dobloni -= insuranceBet;
   updateDobloniDisplay();
 
-  // Se tieni traccia della puntata totale nelle stats:
   if (typeof statsAddStake === 'function') {
     statsAddStake(insuranceBet);
   }
@@ -797,6 +798,7 @@ function skipInsurance() {
 }
 
 
+
 function bindUI() {
   document.getElementById('chip-10').addEventListener('click', () => addBet(10));
   document.getElementById('chip-25').addEventListener('click', () => addBet(25));
@@ -806,14 +808,15 @@ function bindUI() {
 
   document.getElementById('clear-btn').addEventListener('click', clearBet);
   document.getElementById('deal-btn').addEventListener('click', deal);
-  document.getElementById('buy-insurance-btn').addEventListener('click', buyInsurance);
-  document.getElementById('skip-insurance-btn').addEventListener('click', skipInsurance);
 
 
   document.getElementById('hit-btn').addEventListener('click', hit);
   document.getElementById('stand-btn').addEventListener('click', stand);
   document.getElementById('double-btn').addEventListener('click', doubleDown);
   document.getElementById('split-btn').addEventListener('click', split);
+  document.getElementById('buy-insurance-btn').addEventListener('click', buyInsurance);
+  document.getElementById('skip-insurance-btn').addEventListener('click', skipInsurance);
+
 
   document.getElementById('new-round-btn').addEventListener('click', () => newRound(false));
   document.getElementById('repeat-bet-btn').addEventListener('click', repeatBet);
