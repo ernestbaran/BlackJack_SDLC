@@ -43,6 +43,13 @@ const DEFAULT_STATS = {
 let stats = loadStats();
 let roundTotalStake = 0;
 
+// Assicurazione
+let insuranceBet = 0;
+let insuranceOffered = false;
+let insuranceResolved = false;
+let extraWinningsThisRound = 0;
+
+
 function loadStats() {
   try {
     const raw = localStorage.getItem(STATS_KEY);
@@ -203,6 +210,14 @@ async function deal() {
   splitHands = [];
   currentHandIndex = 0;
 
+    // Reset assicurazione per la nuova mano
+  insuranceBet = 0;
+  insuranceOffered = false;
+  insuranceResolved = false;
+  extraWinningsThisRound = 0;
+  document.getElementById('insurance-section').classList.add('hidden');
+
+
   document.getElementById('player-hands-container').innerHTML = '<div id="player-cards" class="cards"></div>';
   document.getElementById('player-cards').innerHTML = '';
   document.getElementById('dealer-cards').innerHTML = '';
@@ -236,6 +251,24 @@ async function deal() {
 
   updatePlayerScore();
   updateDealerScore();
+
+    // Offerta assicurazione se il banco mostra un Asso e il giocatore non ha Blackjack
+  const dealerUpCard = dealerCards[0];
+  const suggestedInsurance = Math.floor(currentBet / 2);
+
+  if (dealerUpCard && dealerUpCard.value === 'ACE' &&
+      playerScore < 21 &&
+      suggestedInsurance > 0 &&
+      dobloni >= suggestedInsurance) {
+    insuranceOffered = true;
+    insuranceBet = suggestedInsurance;
+    document.getElementById('insurance-amount').textContent = insuranceBet;
+    document.getElementById('insurance-section').classList.remove('hidden');
+  } else {
+    document.getElementById('insurance-section').classList.add('hidden');
+  }
+
+
   document.getElementById('dealer-score').textContent = '?';
 
   if (playerScore === 21) {
@@ -489,6 +522,7 @@ async function revealDealerCard() {
     hiddenCardEl.replaceWith(img);
   }
   updateDealerScore();
+  resolveInsuranceIfNeeded();
 }
 
 async function dealerPlay() {
@@ -603,6 +637,7 @@ function endGame(result, message) {
       break;
   }
 
+  winnings += extraWinningsThisRound;
   dobloni += winnings;
   updateDobloniDisplay();
 
@@ -610,6 +645,12 @@ function endGame(result, message) {
   document.getElementById('new-game-section').classList.remove('hidden');
 
   statsFinalizeRound({ outcome, isBlackjack, isBust, winnings });
+
+    extraWinningsThisRound = 0;
+  insuranceBet = 0;
+  insuranceOffered = false;
+  insuranceResolved = true;
+
 }
 
 
@@ -675,6 +716,22 @@ function doubleBet() {
   }
 }
 
+function resolveInsuranceIfNeeded() {
+  if (!insuranceOffered || insuranceResolved) return;
+
+  insuranceResolved = true;
+
+  // Banco ha Blackjack con due carte
+  if (dealerCards.length === 2 && dealerScore === 21 && insuranceBet > 0) {
+    const insuranceWin = insuranceBet * 3; // puntata + vincita 2:1
+    extraWinningsThisRound += insuranceWin;
+    toast('Il banco ha Blackjack, l\'assicurazione paga 2:1.');
+  } else if (insuranceBet > 0) {
+    toast('Assicurazione persa.');
+  }
+}
+
+
 function getCardValue(value) {
   if (value === 'ACE') return 11;
   if (['KING', 'QUEEN', 'JACK'].includes(value)) return 10;
@@ -713,6 +770,33 @@ function updateDealerScore() {
   document.getElementById('dealer-score').textContent = dealerScore;
 }
 
+function buyInsurance() {
+  if (!insuranceOffered || insuranceBet <= 0) return;
+
+  if (dobloni < insuranceBet) {
+    toast('Dobloni insufficienti per l\'assicurazione.');
+    return;
+  }
+
+  dobloni -= insuranceBet;
+  updateDobloniDisplay();
+
+  // Se tieni traccia della puntata totale nelle stats:
+  if (typeof statsAddStake === 'function') {
+    statsAddStake(insuranceBet);
+  }
+
+  document.getElementById('insurance-section').classList.add('hidden');
+  toast(`Assicurazione acquistata: ${insuranceBet} Dobloni.`);
+}
+
+function skipInsurance() {
+  document.getElementById('insurance-section').classList.add('hidden');
+  insuranceBet = 0;
+  insuranceOffered = false;
+}
+
+
 function bindUI() {
   document.getElementById('chip-10').addEventListener('click', () => addBet(10));
   document.getElementById('chip-25').addEventListener('click', () => addBet(25));
@@ -722,6 +806,9 @@ function bindUI() {
 
   document.getElementById('clear-btn').addEventListener('click', clearBet);
   document.getElementById('deal-btn').addEventListener('click', deal);
+  document.getElementById('buy-insurance-btn').addEventListener('click', buyInsurance);
+  document.getElementById('skip-insurance-btn').addEventListener('click', skipInsurance);
+
 
   document.getElementById('hit-btn').addEventListener('click', hit);
   document.getElementById('stand-btn').addEventListener('click', stand);
