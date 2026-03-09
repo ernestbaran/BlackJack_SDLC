@@ -1,7 +1,8 @@
 
-# CardPlay Online - Blackjack
+# CardPlay Online - Blackjack 🃏
 
-Questo progetto è un gioco di Blackjack giocabile dal browser.
+![Documentation](https://github.com/ernestbaran/BlackJack_SDLC/actions/workflows/docs.yml/badge.svg)
+[![GitHub Pages](https://img.shields.io/badge/docs-GitHub%20Pages-blue)](https://ernestbaran.github.io/BlackJack_SDLC/)
 
 ## Funzionalità attuali
 
